@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análisis de Riesgos MAGERIT v3</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+            line-height: 1.6;
+        }
+        header {
+            background-color: #1a365d;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        nav {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        nav button {
+            margin: 0 10px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        nav button:hover {
+            background-color: #0056b3;
+        }
+        nav button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .screen {
+            display: none;
+        }
+        .screen.active {
+            display: block;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        .asset-list, .threat-list {
+            margin-top: 20px;
+        }
+        .asset-item, .threat-item {
+            background-color: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .threat-item {
+            margin-left: 20px;
+        }
+        .threat-details {
+            display: none;
+        }
+        .threat-details.expanded {
+            display: block;
+        }
+        .risk-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .risk-table th, .risk-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .risk-table th {
+            background-color: #f2f2f2;
+        }
+        .risk-leve { background-color: #d4edda; }
+        .risk-medio { background-color: #fff3cd; }
+        .risk-moderado { background-color: #ffeaa7; }
+        .risk-alto { background-color: #f8d7da; }
+        .risk-critico { background-color: #dc3545; color: white; }
+        .expand-btn {
+            cursor: pointer;
+            background: none;
+            border: none;
+            color: #007bff;
+            text-decoration: underline;
+        }
+        .expand-btn:hover {
+            background-color: #f5f5f5;
+        }
+        @media (max-width: 768px) {
+            nav {
+                flex-direction: column;
+            }
+            nav button {
+                margin: 5px 0;
+            }
+            .risk-table {
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Análisis de Riesgos MAGERIT v3</h1>
+        <p>Aplicación Educativa para Diplomatura de Ciberseguridad</p>
+    </header>
+    <nav>
+        <button id="nav-assets">Activos</button>
+        <button id="nav-threats" disabled>Amenazas</button>
+        <button id="nav-summary" disabled>Resumen</button>
+    </nav>
+
+    <div id="screen-assets" class="screen active">
+        <h2>Activos</h2>
+        <div id="asset-list" class="asset-list">
+            <p>No hay activos registrados. Agregá el primero.</p>
+        </div>
+        <button id="new-asset-btn">Nuevo Activo</button>
+        <div id="asset-form" style="display: none; margin-top: 20px; background: white; padding: 20px; border-radius: 5px;">
+            <h3 id="form-title">Agregar Nuevo Activo</h3>
+            <div class="form-group">
+                <label for="asset-name">Nombre:</label>
+                <input type="text" id="asset-name" required>
+            </div>
+            <div class="form-group">
+                <label for="asset-type">Tipo:</label>
+                <select id="asset-type">
+                    <option value="Sistema Informático">Sistema Informático</option>
+                    <option value="Proveedor">Proveedor</option>
+                    <option value="Personas">Personas</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="asset-desc">Descripción (opcional):</label>
+                <textarea id="asset-desc"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Valor Confidencialidad:</label>
+                <select id="asset-c">
+                    <option value="1.0">Muy Alta</option>
+                    <option value="0.8">Alta</option>
+                    <option value="0.6">Media</option>
+                    <option value="0.3">Baja</option>
+                    <option value="0.1">Muy Baja</option>
+                    <option value="0">N/A</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Valor Integridad:</label>
+                <select id="asset-i">
+                    <option value="1.0">Muy Alta</option>
+                    <option value="0.8">Alta</option>
+                    <option value="0.6">Media</option>
+                    <option value="0.3">Baja</option>
+                    <option value="0.1">Muy Baja</option>
+                    <option value="0">N/A</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Valor Disponibilidad:</label>
+                <select id="asset-d">
+                    <option value="1.0">Muy Alta</option>
+                    <option value="0.8">Alta</option>
+                    <option value="0.6">Media</option>
+                    <option value="0.3">Baja</option>
+                    <option value="0.1">Muy Baja</option>
+                    <option value="0">N/A</option>
+                </select>
+            </div>
+            <button id="save-asset">Guardar Activo</button>
+            <button id="cancel-asset">Cancelar</button>
+        </div>
+    </div>
+
+    <div id="screen-threats" class="screen">
+        <h2>Amenazas</h2>
+        <div id="threats-container"></div>
+        <button id="calculate-risks">Calcular Riesgos</button>
+    </div>
+
+    <div id="screen-summary" class="screen">
+        <h2>Resumen de Riesgos</h2>
+        <table class="risk-table">
+            <thead>
+                <tr>
+                    <th>Activo</th>
+                    <th>Amenaza</th>
+                    <th>Riesgo C</th>
+                    <th>Riesgo I</th>
+                    <th>Riesgo D</th>
+                    <th>Riesgo Final</th>
+                </tr>
+            </thead>
+            <tbody id="summary-table-body"></tbody>
+        </table>
+    </div>
+
+    <script>
+        // Datos pre-cargados
+        const threatsData = {
+            "Sistema Informático": [
+                { name: "Acceso no autorizado", prob: 0.8, c: 0.8, i: 0.6, d: 0.3 },
+                { name: "Malware / Ransomware", prob: 0.8, c: 0.6, i: 0.8, d: 0.8 },
+                { name: "Fallo de hardware o software", prob: 0.6, c: 0, i: 0.8, d: 0.8 },
+                { name: "Error de configuración", prob: 0.8, c: 0.6, i: 0.8, d: 0.6 },
+                { name: "Denegación de servicio (DoS)", prob: 0.6, c: 0, i: 0, d: 1.0 },
+                { name: "Fuga de información", prob: 0.6, c: 1.0, i: 0, d: 0 },
+                { name: "Ingeniería social / Phishing", prob: 0.8, c: 0.8, i: 0.6, d: 0.3 }
+            ],
+            "Proveedor": [
+                { name: "Interrupción del servicio del proveedor", prob: 0.6, c: 0, i: 0, d: 1.0 },
+                { name: "Incumplimiento contractual", prob: 0.3, c: 0.8, i: 0.8, d: 0.6 },
+                { name: "Brecha de seguridad en proveedor", prob: 0.6, c: 1.0, i: 0.8, d: 0.6 },
+                { name: "Acceso indebido a datos por parte del proveedor", prob: 0.3, c: 1.0, i: 0.6, d: 0 },
+                { name: "Falta de continuidad del proveedor", prob: 0.3, c: 0, i: 0, d: 0.8 },
+                { name: "Dependencia tecnológica (lock-in)", prob: 0.6, c: 0, i: 0.6, d: 0.8 }
+            ],
+            "Personas": [
+                { name: "Error humano", prob: 0.8, c: 0.6, i: 0.8, d: 0.6 },
+                { name: "Fuga de información por el personal", prob: 0.6, c: 1.0, i: 0, d: 0 },
+                { name: "Ingeniería social (víctima)", prob: 0.8, c: 0.8, i: 0.6, d: 0 },
+                { name: "Indisponibilidad del personal clave", prob: 0.6, c: 0, i: 0, d: 0.8 },
+                { name: "Abuso de privilegios", prob: 0.6, c: 0.8, i: 0.8, d: 0.6 },
+                { name: "Acción malintencionada interna", prob: 0.3, c: 1.0, i: 0.8, d: 0.8 }
+            ]
+        };
+
+        const scaleLabels = {
+            1.0: "Muy Alta",
+            0.8: "Alta",
+            0.6: "Media",
+            0.3: "Baja",
+            0.1: "Muy Baja",
+            0: "N/A"
+        };
+
+        let assets = [];
+        let threats = {};
+        let editingIndex = -1;
+
+        // Navegación
+        document.getElementById('nav-assets').addEventListener('click', () => showScreen('assets'));
+        document.getElementById('nav-threats').addEventListener('click', () => showScreen('threats'));
+        document.getElementById('nav-summary').addEventListener('click', () => showScreen('summary'));
+
+        function showScreen(screen) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('screen-' + screen).classList.add('active');
+        }
+
+        // Pantalla Activos
+        document.getElementById('new-asset-btn').addEventListener('click', () => {
+            editingIndex = -1;
+            document.getElementById('form-title').textContent = 'Agregar Nuevo Activo';
+            document.getElementById('asset-form').style.display = 'block';
+            clearForm();
+        });
+
+        document.getElementById('cancel-asset').addEventListener('click', () => {
+            document.getElementById('asset-form').style.display = 'none';
+            clearForm();
+        });
+
+        document.getElementById('save-asset').addEventListener('click', () => {
+            const name = document.getElementById('asset-name').value;
+            const type = document.getElementById('asset-type').value;
+            const desc = document.getElementById('asset-desc').value;
+            const c = parseFloat(document.getElementById('asset-c').value);
+            const i = parseFloat(document.getElementById('asset-i').value);
+            const d = parseFloat(document.getElementById('asset-d').value);
+
+            if (name) {
+                if (editingIndex >= 0) {
+                    // Editar existente
+                    const oldName = assets[editingIndex].name;
+                    assets[editingIndex] = { name, type, desc, c, i, d };
+                    if (oldName !== name) {
+                        delete threats[oldName];
+                        threats[name] = threatsData[type].map(t => ({ ...t, applies: true }));
+                    } else if (assets[editingIndex].type !== type) {
+                        threats[name] = threatsData[type].map(t => ({ ...t, applies: true }));
+                    }
+                } else {
+                    // Nuevo
+                    assets.push({ name, type, desc, c, i, d });
+                    threats[name] = threatsData[type].map(t => ({ ...t, applies: true }));
+                }
+                updateAssetList();
+                document.getElementById('asset-form').style.display = 'none';
+                clearForm();
+                editingIndex = -1;
+                document.getElementById('nav-threats').disabled = assets.length === 0;
+            }
+        });
+
+        function clearForm() {
+            document.getElementById('asset-name').value = '';
+            document.getElementById('asset-desc').value = '';
+            document.getElementById('asset-c').value = '1.0';
+            document.getElementById('asset-i').value = '1.0';
+            document.getElementById('asset-d').value = '1.0';
+        }
+
+        function editAsset(index) {
+            editingIndex = index;
+            const asset = assets[index];
+            document.getElementById('asset-name').value = asset.name;
+            document.getElementById('asset-type').value = asset.type;
+            document.getElementById('asset-desc').value = asset.desc;
+            document.getElementById('asset-c').value = asset.c === 0 ? "0" : asset.c.toFixed(1);
+            document.getElementById('asset-i').value = asset.i === 0 ? "0" : asset.i.toFixed(1);
+            document.getElementById('asset-d').value = asset.d === 0 ? "0" : asset.d.toFixed(1);
+            document.getElementById('form-title').textContent = 'Editar Activo';
+            document.getElementById('asset-form').style.display = 'block';
+        }
+
+        function deleteAsset(index) {
+            if (confirm('¿Estás seguro de que quieres eliminar este activo?')) {
+                const name = assets[index].name;
+                assets.splice(index, 1);
+                delete threats[name];
+                updateAssetList();
+                document.getElementById('nav-threats').disabled = assets.length === 0;
+                if (assets.length === 0) {
+                    document.getElementById('nav-summary').disabled = true;
+                    showScreen('assets');
+                }
+            }
+        }
+
+        function updateAssetList() {
+            const list = document.getElementById('asset-list');
+            if (assets.length === 0) {
+                list.innerHTML = '<p>No hay activos registrados. Agregá el primero.</p>';
+            } else {
+                list.innerHTML = assets.map((asset, index) => `
+                    <div class="asset-item">
+                        <h3>${asset.name}</h3>
+                        <p><strong>Tipo:</strong> ${asset.type}</p>
+                        <p><strong>Descripción:</strong> ${asset.desc || 'N/A'}</p>
+                        <p><strong>C:</strong> ${scaleLabels[asset.c]}, <strong>I:</strong> ${scaleLabels[asset.i]}, <strong>D:</strong> ${scaleLabels[asset.d]}</p>
+                        <button onclick="editAsset(${index})">Editar</button>
+                        <button onclick="deleteAsset(${index})">Eliminar</button>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // Pantalla Amenazas
+        function updateThreatsScreen() {
+            const container = document.getElementById('threats-container');
+            container.innerHTML = assets.map(asset => `
+                <div class="asset-item">
+                    <h3>${asset.name} (${asset.type})</h3>
+                    <div class="threat-list">
+                        ${threats[asset.name].map((threat, index) => `
+                            <div class="threat-item">
+                                <button class="expand-btn" onclick="toggleThreat(${assets.indexOf(asset)}, ${index})"><span class="icon">▶</span> ${threat.name}</button>
+                                <div class="threat-details" id="threat-${assets.indexOf(asset)}-${index}">
+                                    <label><input type="checkbox" ${threat.applies ? 'checked' : ''} onchange="updateThreatApplies(${assets.indexOf(asset)}, ${index}, this.checked)"> No aplica</label>
+                                    <div class="form-group">
+                                        <label>Probabilidad:</label>
+                                        <select onchange="updateThreatProb(${assets.indexOf(asset)}, ${index}, this.value)">
+                                            <option value="1.0" ${threat.prob === 1.0 ? 'selected' : ''}>Muy Alta</option>
+                                            <option value="0.8" ${threat.prob === 0.8 ? 'selected' : ''}>Alta</option>
+                                            <option value="0.6" ${threat.prob === 0.6 ? 'selected' : ''}>Media</option>
+                                            <option value="0.3" ${threat.prob === 0.3 ? 'selected' : ''}>Baja</option>
+                                            <option value="0.1" ${threat.prob === 0.1 ? 'selected' : ''}>Muy Baja</option>
+                                            <option value="0" ${threat.prob === 0 ? 'selected' : ''}>N/A</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Degradación C:</label>
+                                        <select onchange="updateThreatDegrad(${assets.indexOf(asset)}, ${index}, 'c', this.value)">
+                                            <option value="1.0" ${threat.c === 1.0 ? 'selected' : ''}>Muy Alta</option>
+                                            <option value="0.8" ${threat.c === 0.8 ? 'selected' : ''}>Alta</option>
+                                            <option value="0.6" ${threat.c === 0.6 ? 'selected' : ''}>Media</option>
+                                            <option value="0.3" ${threat.c === 0.3 ? 'selected' : ''}>Baja</option>
+                                            <option value="0.1" ${threat.c === 0.1 ? 'selected' : ''}>Muy Baja</option>
+                                            <option value="0" ${threat.c === 0 ? 'selected' : ''}>N/A</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Degradación I:</label>
+                                        <select onchange="updateThreatDegrad(${assets.indexOf(asset)}, ${index}, 'i', this.value)">
+                                            <option value="1.0" ${threat.i === 1.0 ? 'selected' : ''}>Muy Alta</option>
+                                            <option value="0.8" ${threat.i === 0.8 ? 'selected' : ''}>Alta</option>
+                                            <option value="0.6" ${threat.i === 0.6 ? 'selected' : ''}>Media</option>
+                                            <option value="0.3" ${threat.i === 0.3 ? 'selected' : ''}>Baja</option>
+                                            <option value="0.1" ${threat.i === 0.1 ? 'selected' : ''}>Muy Baja</option>
+                                            <option value="0" ${threat.i === 0 ? 'selected' : ''}>N/A</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Degradación D:</label>
+                                        <select onchange="updateThreatDegrad(${assets.indexOf(asset)}, ${index}, 'd', this.value)">
+                                            <option value="1.0" ${threat.d === 1.0 ? 'selected' : ''}>Muy Alta</option>
+                                            <option value="0.8" ${threat.d === 0.8 ? 'selected' : ''}>Alta</option>
+                                            <option value="0.6" ${threat.d === 0.6 ? 'selected' : ''}>Media</option>
+                                            <option value="0.3" ${threat.d === 0.3 ? 'selected' : ''}>Baja</option>
+                                            <option value="0.1" ${threat.d === 0.1 ? 'selected' : ''}>Muy Baja</option>
+                                            <option value="0" ${threat.d === 0 ? 'selected' : ''}>N/A</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleThreat(assetIndex, threatIndex) {
+            const details = document.getElementById(`threat-${assetIndex}-${threatIndex}`);
+            const btn = details.previousElementSibling;
+            const icon = btn.querySelector('.icon');
+            if (details.classList.contains('expanded')) {
+                details.classList.remove('expanded');
+                icon.textContent = '▶';
+            } else {
+                details.classList.add('expanded');
+                icon.textContent = '▼';
+            }
+        }
+
+        function updateThreatApplies(assetIndex, threatIndex, applies) {
+            threats[assets[assetIndex].name][threatIndex].applies = applies;
+        }
+
+        function updateThreatProb(assetIndex, threatIndex, prob) {
+            threats[assets[assetIndex].name][threatIndex].prob = parseFloat(prob);
+        }
+
+        function updateThreatDegrad(assetIndex, threatIndex, dim, value) {
+            threats[assets[assetIndex].name][threatIndex][dim] = parseFloat(value);
+        }
+
+        document.getElementById('nav-threats').addEventListener('click', updateThreatsScreen);
+
+        // Pantalla Resumen
+        document.getElementById('calculate-risks').addEventListener('click', () => {
+            const tbody = document.getElementById('summary-table-body');
+            tbody.innerHTML = '';
+            assets.forEach(asset => {
+                threats[asset.name].forEach(threat => {
+                    if (!threat.applies) return;
+                    const impactoC = asset.c * threat.c;
+                    const impactoI = asset.i * threat.i;
+                    const impactoD = asset.d * threat.d;
+                    const riesgoC = impactoC * threat.prob;
+                    const riesgoI = impactoI * threat.prob;
+                    const riesgoD = impactoD * threat.prob;
+                    const riesgoFinal = Math.max(riesgoC, riesgoI, riesgoD);
+                    let riskClass = '';
+                    if (riesgoFinal <= 0.19) riskClass = 'risk-leve';
+                    else if (riesgoFinal <= 0.39) riskClass = 'risk-medio';
+                    else if (riesgoFinal <= 0.59) riskClass = 'risk-moderado';
+                    else if (riesgoFinal <= 0.79) riskClass = 'risk-alto';
+                    else riskClass = 'risk-critico';
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${asset.name}</td>
+                            <td>${threat.name}</td>
+                            <td>${riesgoC.toFixed(2)}</td>
+                            <td>${riesgoI.toFixed(2)}</td>
+                            <td>${riesgoD.toFixed(2)}</td>
+                            <td class="${riskClass}">${riesgoFinal.toFixed(2)}</td>
+                        </tr>
+                    `;
+                });
+            });
+            showScreen('summary');
+            document.getElementById('nav-summary').disabled = false;
+        });
+    </script>
+</body>
+</html>
