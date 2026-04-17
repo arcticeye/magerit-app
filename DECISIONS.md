@@ -59,26 +59,97 @@ Reglas:
    Esta app no implementa dependencias.
    Motivo: complejidad innecesaria para el MVP educativo.
 
-## Lógica de controles — MVP v2 (a construir)
+## Lógica de controles — MVP v2 (DISEÑO CERRADO, listo para construir)
 
-Asociación: Control → Tipos de activo donde aplica → Amenazas que mitiga.
-Basado en catálogo MAGERIT v3.
+### Marco normativo de controles
+Los controles usan la codificación y nomenclatura de ISO 27002:2022 (no MAGERIT).
+Motivo: norma más moderna, internacionalmente reconocida, y útil para que los alumnos
+trabajen con un marco normativo real de uso profesional.
+En clase se compara con MAGERIT donde corresponde.
 
-Cada control tendrá:
-- Nombre y descripción
-- Tipos de activo donde aplica
-- Amenazas que mitiga (por nombre)
-- Estado de implementación: Efectivo / Parcial / No implementado
+### Fórmula de riesgo residual — Factor de Cobertura (DECISIÓN CERRADA)
 
-Fórmula de riesgo actual (residual):
-- A definir en la próxima sesión de diseño en Claude.ai
+MAGERIT puro resta la efectividad de cada control directamente sobre probabilidad e impacto
+por separado, usando una tabla de relevancia control-amenaza generada por macros VBA.
+En esta app se simplifica con un Factor de Cobertura multiplicado sobre el riesgo inherente.
 
-Lo que hay que construir en v2:
-- Sección de controles por amenaza dentro de Pantalla 2
-- Controles pre-cargados según amenaza y tipo de activo, editables en su estado
-- Resumen actualizado: riesgo inherente + riesgo actual lado a lado
+Estados de control y sus valores:
+- Efectivo        → 0.20  (reduce el riesgo en un 80%)
+- Parcial         → 0.50  (reduce el riesgo en un 50%)
+- No implementado → 1.00  (sin reducción)
 
-Restricciones para v2:
+Fórmula:
+  Factor_cobertura = promedio(valores de todos los controles de esa amenaza)
+  Riesgo_residual  = Riesgo_inherente × Factor_cobertura
+
+Excepción — Proveedor homologado:
+  Si el control 5.19+5.20 está en estado "Efectivo" → Riesgo_residual = 0.10 (nivel Leve)
+  para TODAS las amenazas del proveedor, independientemente del cálculo general.
+  Motivo: la homologación del proveedor es un control integral que cubre todas sus amenazas.
+
+Comparación con MAGERIT para usar en clase:
+  "MAGERIT puro resta la efectividad de cada control sobre probabilidad e impacto por separado.
+  Nosotros simplificamos a un factor promedio sobre el riesgo final. La dirección es la misma
+  —más controles efectivos, menor riesgo residual— pero la magnitud no es exactamente igual.
+  Esta simplificación es válida para tomar decisiones; en una auditoría real se usaría la
+  metodología completa."
+
+### Catálogo de controles ISO 27002:2022 — mapeo amenaza → controles
+
+#### Sistema Informático
+
+| Amenaza                        | Código ISO  | Nombre del control                          |
+|-------------------------------|-------------|---------------------------------------------|
+| Acceso no autorizado          | 5.15        | Control de acceso                           |
+| Acceso no autorizado          | 8.5         | Autenticación segura                        |
+| Malware / Ransomware          | 8.7         | Controles contra el código malicioso        |
+| Malware / Ransomware          | 8.13        | Copias de seguridad de la información       |
+| Fallo de hardware o software  | 8.13        | Copias de seguridad de la información       |
+| Fallo de hardware o software  | 8.14        | Redundancia de recursos de tratamiento      |
+| Error de configuración        | 8.9         | Gestión de la configuración                 |
+| Error de configuración        | 8.8         | Gestión de vulnerabilidades técnicas        |
+| Denegación de servicio (DoS)  | 8.6         | Gestión de capacidades                      |
+| Denegación de servicio (DoS)  | 8.20        | Controles de red                            |
+| Fuga de información           | 8.12        | Prevención de fugas de datos (DLP)          |
+| Fuga de información           | 8.24        | Uso de criptografía                         |
+| Ingeniería social / Phishing  | 6.3         | Concienciación, educación y formación       |
+| Ingeniería social / Phishing  | 8.23        | Filtrado web                                |
+
+#### Personas
+
+| Amenaza                              | Código ISO  | Nombre del control                          |
+|-------------------------------------|-------------|---------------------------------------------|
+| Error humano                        | 6.3         | Concienciación, educación y formación       |
+| Error humano                        | 5.37        | Documentación de procedimientos operacionales|
+| Fuga de información por el personal | 6.6         | Acuerdos de confidencialidad (NDA)          |
+| Fuga de información por el personal | 8.12        | Prevención de fugas de datos (DLP)          |
+| Ingeniería social (víctima)         | 6.3         | Concienciación, educación y formación       |
+| Ingeniería social (víctima)         | 6.4         | Proceso disciplinario                       |
+| Indisponibilidad del personal clave | 5.37        | Documentación de procedimientos operacionales|
+| Indisponibilidad del personal clave | 5.30        | Preparación de TIC para continuidad         |
+| Abuso de privilegios                | 8.2         | Gestión de privilegios de acceso            |
+| Abuso de privilegios                | 5.3         | Segregación de tareas                       |
+| Acción malintencionada interna      | 8.15        | Registro de eventos (logging)               |
+| Acción malintencionada interna      | 5.3         | Segregación de tareas                       |
+
+#### Proveedor — control único integral
+
+| Código ISO  | Nombre del control                                              | Efecto                                      |
+|-------------|----------------------------------------------------------------|---------------------------------------------|
+| 5.19 + 5.20 | Seguridad en relaciones con proveedores + Acuerdos de seguridad| Si Efectivo → Riesgo residual = Leve (0.10) |
+|             | (homologación: SLA + NDA + requisitos de seguridad documentados)| para TODAS las amenazas del proveedor       |
+
+### Lo que hay que construir en v2
+- Pantalla 2 (Amenazas): agregar sección de controles por amenaza dentro del acordeón
+  - Controles pre-cargados según amenaza y tipo de activo
+  - Cada control con selector de estado: Efectivo / Parcial / No implementado
+- Pantalla 3 (Resumen): mostrar columnas adicionales
+  - Riesgo inherente (ya existe)
+  - Controles (cantidad y estado resumido)
+  - Riesgo residual (nuevo, calculado con Factor de Cobertura)
+  - Mismo código de colores existente aplicado al riesgo residual
+
+### Restricciones para v2
 - Mantener archivo único index.html
 - No romper funcionalidad existente de v1
 - Misma escala visual y criterios de color
