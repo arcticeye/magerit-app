@@ -257,6 +257,86 @@
             ]
         };
 
+        // Catálogo de controles ISO 27002:2022 — mapeo amenaza → controles
+        const controlsData = {
+            "Sistema Informático": {
+                "Acceso no autorizado": [
+                    { code: "5.15", name: "Control de acceso" },
+                    { code: "8.5", name: "Autenticación segura" }
+                ],
+                "Malware / Ransomware": [
+                    { code: "8.7", name: "Controles contra el código malicioso" },
+                    { code: "8.13", name: "Copias de seguridad de la información" }
+                ],
+                "Fallo de hardware o software": [
+                    { code: "8.13", name: "Copias de seguridad de la información" },
+                    { code: "8.14", name: "Redundancia de recursos de tratamiento" }
+                ],
+                "Error de configuración": [
+                    { code: "8.9", name: "Gestión de la configuración" },
+                    { code: "8.8", name: "Gestión de vulnerabilidades técnicas" }
+                ],
+                "Denegación de servicio (DoS)": [
+                    { code: "8.6", name: "Gestión de capacidades" },
+                    { code: "8.20", name: "Controles de red" }
+                ],
+                "Fuga de información": [
+                    { code: "8.12", name: "Prevención de fugas de datos (DLP)" },
+                    { code: "8.24", name: "Uso de criptografía" }
+                ],
+                "Ingeniería social / Phishing": [
+                    { code: "6.3", name: "Concienciación, educación y formación" },
+                    { code: "8.23", name: "Filtrado web" }
+                ]
+            },
+            "Personas": {
+                "Error humano": [
+                    { code: "6.3", name: "Concienciación, educación y formación" },
+                    { code: "5.37", name: "Documentación de procedimientos operacionales" }
+                ],
+                "Fuga de información por el personal": [
+                    { code: "6.6", name: "Acuerdos de confidencialidad (NDA)" },
+                    { code: "8.12", name: "Prevención de fugas de datos (DLP)" }
+                ],
+                "Ingeniería social (víctima)": [
+                    { code: "6.3", name: "Concienciación, educación y formación" },
+                    { code: "6.4", name: "Proceso disciplinario" }
+                ],
+                "Indisponibilidad del personal clave": [
+                    { code: "5.37", name: "Documentación de procedimientos operacionales" },
+                    { code: "5.30", name: "Preparación de TIC para continuidad" }
+                ],
+                "Abuso de privilegios": [
+                    { code: "8.2", name: "Gestión de privilegios de acceso" },
+                    { code: "5.3", name: "Segregación de tareas" }
+                ],
+                "Acción malintencionada interna": [
+                    { code: "8.15", name: "Registro de eventos (logging)" },
+                    { code: "5.3", name: "Segregación de tareas" }
+                ]
+            },
+            "Proveedor": {
+                "Interrupción del servicio del proveedor": [
+                    { code: "5.19+5.20", name: "Seguridad en relaciones con proveedores + Acuerdos de seguridad (homologación)" }
+                ],
+                "Incumplimiento contractual": [
+                    { code: "5.19+5.20", name: "Seguridad en relaciones con proveedores + Acuerdos de seguridad (homologación)" }
+                ],
+                "Brecha de seguridad en proveedor": [
+                    { code: "5.19+5.20", name: "Seguridad en relaciones con proveedores + Acuerdos de seguridad (homologación)" }
+                ],
+                "Acceso indebido a datos por parte del proveedor": [
+                    { code: "5.19+5.20", name: "Seguridad en relaciones con proveedores + Acuerdos de seguridad (homologación)" }
+                ],
+                "Falta de continuidad del proveedor": [
+                    { code: "5.19+5.20", name: "Seguridad en relaciones con proveedores + Acuerdos de seguridad (homologación)" }
+                ],
+                "Dependencia tecnológica (lock-in)": [
+                    { code: "5.19+5.20", name: "Seguridad en relaciones con proveedores + Acuerdos de seguridad (homologación)" }
+                ]
+            }
+        };
+
         const scaleLabels = {
             1.0: "Muy Alta",
             0.8: "Alta",
