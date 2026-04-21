@@ -133,8 +133,8 @@
 </head>
 <body>
     <header>
-        <h1>Análisis de Riesgos MAGERIT v3</h1>
-        <p>Aplicación Educativa para Diplomatura de Ciberseguridad</p>
+        <h1>Análisis y Evaluación de Riesgos</h1>
+        <p>Aplicación Educativa que integra MAGERIT v3 e ISO/IEC 27002:2022</p>
     </header>
     <nav>
         <button id="nav-assets">Activos</button>
@@ -217,10 +217,11 @@
                 <tr>
                     <th>Activo</th>
                     <th>Amenaza</th>
-                    <th>Riesgo C</th>
-                    <th>Riesgo I</th>
-                    <th>Riesgo D</th>
-                    <th>Riesgo Final</th>
+                    <th>R. Inherente C</th>
+                    <th>R. Inherente I</th>
+                    <th>R. Inherente D</th>
+                    <th>Riesgo Inherente</th>
+                    <th>Riesgo Residual</th>
                 </tr>
             </thead>
             <tbody id="summary-table-body"></tbody>
@@ -519,9 +520,9 @@
                                         ${(threat.controls || []).map((ctrl, ctrlIndex) => `
                                             <div class="form-group">
                                                 <label>${ctrl.code} - ${ctrl.name}</label>
-                                                <select onchange="updateControlState(${assets.indexOf(asset)}, ${index}, ${ctrlIndex}, this.value)">
+                                                <select onchange="updateControlState(${assets.indexOf(asset)}, ${index}, ${ctrlIndex}, this.value, this)">
                                                     <option value="No implementado" ${ctrl.state === 'No implementado' ? 'selected' : ''}>No implementado</option>
-                                                    <option value="Parcial" ${ctrl.state === 'Parcial' ? 'selected' : ''}>Parcial</option>
+                                                    ${asset.type !== 'Proveedor' ? `<option value="Parcial" ${ctrl.state === 'Parcial' ? 'selected' : ''}>Parcial</option>` : ''}
                                                     <option value="Efectivo" ${ctrl.state === 'Efectivo' ? 'selected' : ''}>Efectivo</option>
                                                 </select>
                                             </div>
@@ -548,8 +549,62 @@
             }
         }
 
-        function updateControlState(assetIndex, threatIndex, controlIndex, state) {
-            threats[assets[assetIndex].name][threatIndex].controls[controlIndex].state = state;
+        function updateControlState(assetIndex, threatIndex, controlIndex, state, selectElement) {
+            const asset = assets[assetIndex];
+            const assetName = asset.name;
+
+            // Guardar estado anterior
+            const previousState = threats[assetName][threatIndex].controls[controlIndex].state;
+
+            // Verificar si es Proveedor y el nuevo estado es Efectivo
+            if (asset.type === 'Proveedor' && state === 'Efectivo') {
+                const confirmed = confirm(
+                    'La homologación del proveedor (ISO 27002 5.19+5.20) es un control integral que mitiga todas sus amenazas. ' +
+                    'Al marcarlo como Efectivo, el riesgo residual de todas las amenazas de este proveedor pasará a Leve (0.10). ' +
+                    '¿Confirmar?'
+                );
+
+                if (confirmed) {
+                    // Actualizar todos los controles de todas las amenazas del proveedor a Efectivo
+                    threats[assetName].forEach(threat => {
+                        (threat.controls || []).forEach(ctrl => {
+                            ctrl.state = 'Efectivo';
+                        });
+                    });
+                    // Refrescar la pantalla para mostrar todos los cambios
+                    updateThreatsScreen();
+                } else {
+                    // Revertir el selector al estado anterior
+                    if (selectElement) {
+                        selectElement.value = previousState;
+                    }
+                }
+            } else if (asset.type === 'Proveedor' && state === 'No implementado') {
+                // Verificar si es Proveedor y el nuevo estado es No implementado
+                const confirmed = confirm(
+                    'Al quitar la homologación del proveedor, todas sus amenazas volverán al estado No implementado. ' +
+                    '¿Confirmar?'
+                );
+
+                if (confirmed) {
+                    // Actualizar todos los controles de todas las amenazas del proveedor a No implementado
+                    threats[assetName].forEach(threat => {
+                        (threat.controls || []).forEach(ctrl => {
+                            ctrl.state = 'No implementado';
+                        });
+                    });
+                    // Refrescar la pantalla para mostrar todos los cambios
+                    updateThreatsScreen();
+                } else {
+                    // Revertir el selector al estado anterior
+                    if (selectElement) {
+                        selectElement.value = previousState;
+                    }
+                }
+            } else {
+                // Comportamiento normal para otros casos
+                threats[assetName][threatIndex].controls[controlIndex].state = state;
+            }
         }
 
         function updateThreatApplies(assetIndex, threatIndex, applies) {
@@ -573,19 +628,71 @@
             assets.forEach(asset => {
                 threats[asset.name].forEach(threat => {
                     if (!threat.applies) return;
+
+                    // Cálculo de riesgo inherente
                     const impactoC = asset.c * threat.c;
                     const impactoI = asset.i * threat.i;
                     const impactoD = asset.d * threat.d;
                     const riesgoC = impactoC * threat.prob;
                     const riesgoI = impactoI * threat.prob;
                     const riesgoD = impactoD * threat.prob;
-                    const riesgoFinal = Math.max(riesgoC, riesgoI, riesgoD);
-                    let riskClass = '';
-                    if (riesgoFinal <= 0.19) riskClass = 'risk-leve';
-                    else if (riesgoFinal <= 0.39) riskClass = 'risk-medio';
-                    else if (riesgoFinal <= 0.59) riskClass = 'risk-moderado';
-                    else if (riesgoFinal <= 0.79) riskClass = 'risk-alto';
-                    else riskClass = 'risk-critico';
+                    const riesgoInherente = Math.max(riesgoC, riesgoI, riesgoD);
+
+                    // Cálculo de riesgo residual
+                    let riesgoResidual = 0;
+
+                    // Verificar si es Proveedor con al menos un control Efectivo
+                    if (asset.type === 'Proveedor') {
+                        const tieneEfectivo = (threat.controls || []).some(ctrl => ctrl.state === 'Efectivo');
+                        if (tieneEfectivo) {
+                            riesgoResidual = 0.10;
+                        } else {
+                            // Calcular factor normal
+                            const controles = threat.controls || [];
+                            if (controles.length > 0) {
+                                const valorControles = controles.map(ctrl => {
+                                    if (ctrl.state === 'Efectivo') return 0.20;
+                                    if (ctrl.state === 'Parcial') return 0.50;
+                                    return 1.00;
+                                });
+                                const factor = valorControles.reduce((a, b) => a + b, 0) / valorControles.length;
+                                riesgoResidual = riesgoInherente * factor;
+                            } else {
+                                riesgoResidual = riesgoInherente;
+                            }
+                        }
+                    } else {
+                        // Para otros tipos de activo: cálculo normal
+                        const controles = threat.controls || [];
+                        if (controles.length > 0) {
+                            const valorControles = controles.map(ctrl => {
+                                if (ctrl.state === 'Efectivo') return 0.20;
+                                if (ctrl.state === 'Parcial') return 0.50;
+                                return 1.00;
+                            });
+                            const factor = valorControles.reduce((a, b) => a + b, 0) / valorControles.length;
+                            riesgoResidual = riesgoInherente * factor;
+                        } else {
+                            riesgoResidual = riesgoInherente;
+                        }
+                    }
+
+                    // Determinar clase de color para riesgo inherente
+                    let riskClassInherente = '';
+                    if (riesgoInherente <= 0.19) riskClassInherente = 'risk-leve';
+                    else if (riesgoInherente <= 0.39) riskClassInherente = 'risk-medio';
+                    else if (riesgoInherente <= 0.59) riskClassInherente = 'risk-moderado';
+                    else if (riesgoInherente <= 0.79) riskClassInherente = 'risk-alto';
+                    else riskClassInherente = 'risk-critico';
+
+                    // Determinar clase de color para riesgo residual
+                    let riskClassResidual = '';
+                    if (riesgoResidual <= 0.19) riskClassResidual = 'risk-leve';
+                    else if (riesgoResidual <= 0.39) riskClassResidual = 'risk-medio';
+                    else if (riesgoResidual <= 0.59) riskClassResidual = 'risk-moderado';
+                    else if (riesgoResidual <= 0.79) riskClassResidual = 'risk-alto';
+                    else riskClassResidual = 'risk-critico';
+
                     tbody.innerHTML += `
                         <tr>
                             <td>${asset.name}</td>
@@ -593,7 +700,8 @@
                             <td>${riesgoC.toFixed(2)}</td>
                             <td>${riesgoI.toFixed(2)}</td>
                             <td>${riesgoD.toFixed(2)}</td>
-                            <td class="${riskClass}">${riesgoFinal.toFixed(2)}</td>
+                            <td class="${riskClassInherente}">${riesgoInherente.toFixed(2)}</td>
+                            <td class="${riskClassResidual}">${riesgoResidual.toFixed(2)}</td>
                         </tr>
                     `;
                 });
