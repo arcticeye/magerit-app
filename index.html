@@ -388,14 +388,14 @@
                     assets[editingIndex] = { name, type, desc, c, i, d };
                     if (oldName !== name) {
                         delete threats[oldName];
-                        threats[name] = threatsData[type].map(t => ({ ...t, applies: true }));
+                        threats[name] = threatsData[type].map(t => ({ ...t, applies: true, controls: (controlsData[type][t.name] || []).map(ctrl => ({ ...ctrl, state: 'No implementado' })) }));
                     } else if (assets[editingIndex].type !== type) {
-                        threats[name] = threatsData[type].map(t => ({ ...t, applies: true }));
+                        threats[name] = threatsData[type].map(t => ({ ...t, applies: true, controls: (controlsData[type][t.name] || []).map(ctrl => ({ ...ctrl, state: 'No implementado' })) }));
                     }
                 } else {
                     // Nuevo
                     assets.push({ name, type, desc, c, i, d });
-                    threats[name] = threatsData[type].map(t => ({ ...t, applies: true }));
+                    threats[name] = threatsData[type].map(t => ({ ...t, applies: true, controls: (controlsData[type][t.name] || []).map(ctrl => ({ ...ctrl, state: 'No implementado' })) }));
                 }
                 updateAssetList();
                 document.getElementById('asset-form').style.display = 'none';
@@ -514,6 +514,19 @@
                                             <option value="0" ${threat.d === 0 ? 'selected' : ''}>N/A</option>
                                         </select>
                                     </div>
+                                    <div style="margin-top: 15px; border-top: 1px solid #ddd; padding-top: 15px;">
+                                        <h4 style="margin-top: 0;">Controles Aplicables:</h4>
+                                        ${(threat.controls || []).map((ctrl, ctrlIndex) => `
+                                            <div class="form-group">
+                                                <label>${ctrl.code} - ${ctrl.name}</label>
+                                                <select onchange="updateControlState(${assets.indexOf(asset)}, ${index}, ${ctrlIndex}, this.value)">
+                                                    <option value="No implementado" ${ctrl.state === 'No implementado' ? 'selected' : ''}>No implementado</option>
+                                                    <option value="Parcial" ${ctrl.state === 'Parcial' ? 'selected' : ''}>Parcial</option>
+                                                    <option value="Efectivo" ${ctrl.state === 'Efectivo' ? 'selected' : ''}>Efectivo</option>
+                                                </select>
+                                            </div>
+                                        `).join('')}
+                                    </div>
                                 </div>
                             </div>
                         `).join('')}
@@ -533,6 +546,10 @@
                 details.classList.add('expanded');
                 icon.textContent = '▼';
             }
+        }
+
+        function updateControlState(assetIndex, threatIndex, controlIndex, state) {
+            threats[assets[assetIndex].name][threatIndex].controls[controlIndex].state = state;
         }
 
         function updateThreatApplies(assetIndex, threatIndex, applies) {
