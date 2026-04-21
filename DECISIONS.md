@@ -1,8 +1,8 @@
 # MAGERIT App — Documento de proyecto
 
 ## Qué es esto
-Aplicación web educativa de análisis de riesgos basada en metodología MAGERIT v3.
-Destinada a clases prácticas en diplomatura de ciberseguridad.
+Aplicación web educativa de análisis de riesgos basada en metodología MAGERIT v3
+e ISO/IEC 27002:2022. Destinada a clases prácticas en diplomatura de ciberseguridad.
 Autor: Matías Daniel Adés, consultor senior de ciberseguridad y GRC.
 
 ## Stack técnico
@@ -10,16 +10,20 @@ Autor: Matías Daniel Adés, consultor senior de ciberseguridad y GRC.
 - Sin frameworks, sin dependencias, sin servidor
 - Se abre directamente en el navegador
 
-## Estado actual — MVP v1 completado
-Funcionalidad implementada: análisis de riesgo inherente.
+## Estado actual — MVP v2 completado
+Título de la app: "Análisis y Evaluación de Riesgos"
+Subtítulo: "Aplicación Educativa que integra MAGERIT v3 e ISO/IEC 27002:2022"
 
 Flujo de 3 pantallas:
-1. Activos: ABM completo (agregar, editar, eliminar)
-2. Amenazas: pre-cargadas por tipo de activo, editables, formato acordeón
-3. Resumen: tabla con riesgos calculados y colores por nivel
+1. Activos: ABM completo (agregar, editar, eliminar) con valores C, I, D
+2. Amenazas: pre-cargadas por tipo de activo, editables en acordeón,
+   con probabilidad, degradación y controles ISO 27002:2022 por amenaza
+3. Resumen: tabla con riesgo inherente (C, I, D + final) y riesgo residual,
+   ambos con código de colores por nivel
 
 ## Lógica de negocio implementada
 
+### Activos
 Tipos de activo (3):
 - Sistema Informático (cubre HW + SW + datos + red como un todo)
 - Proveedor
@@ -28,12 +32,13 @@ Tipos de activo (3):
 Escala única para valoración de activos, probabilidad y degradación:
 - Muy Alta=1.0, Alta=0.8, Media=0.6, Baja=0.3, Muy Baja=0.1, N/A=0
 
+### Riesgo Inherente
 Fórmulas:
 - Impacto_dim = Valor_activo_dim × Degradación_dim
 - Riesgo_dim = Impacto_dim × Probabilidad
-- Riesgo_amenaza = max(Riesgo_C, Riesgo_I, Riesgo_D)
+- Riesgo_inherente = max(Riesgo_C, Riesgo_I, Riesgo_D)
 
-Niveles de riesgo:
+Niveles de riesgo (aplica a inherente y residual):
 - 0.00–0.19 = Leve (verde)
 - 0.20–0.39 = Medio (amarillo)
 - 0.40–0.59 = Moderado (naranja)
@@ -43,56 +48,50 @@ Niveles de riesgo:
 Reglas:
 - Amenazas marcadas "No aplica" no aparecen en el resumen
 
-## Decisiones de diseño — desviaciones de MAGERIT puro
-
-1. ACTIVOS SIMPLIFICADOS: En lugar de los tipos granulares de MAGERIT (HW, SW, COM, D, L, P),
-   se usan 3 tipos operativos: Sistema Informático, Proveedor, Personas.
-   Sistema Informático agrupa internamente HW + SW + datos + red sin modelar dependencias.
-   Motivo: simplicidad educativa y proximidad a la práctica corporativa real.
-
-2. RIESGO COLAPSADO: MAGERIT calcula riesgo por dimensión de forma separada.
-   En esta app se muestra el desglose (Riesgo C, Riesgo I, Riesgo D) pero el Riesgo Final
-   es max(Riesgo_C, Riesgo_I, Riesgo_D) como criterio conservador.
-   Motivo: facilitar la toma de decisiones y la comunicación en clase.
-
-3. SIN DEPENDENCIAS DE ACTIVOS: MAGERIT modela árboles de dependencia entre activos.
-   Esta app no implementa dependencias.
-   Motivo: complejidad innecesaria para el MVP educativo.
-
-## Lógica de controles — MVP v2 (DISEÑO CERRADO, listo para construir)
-
-### Marco normativo de controles
-Los controles usan la codificación y nomenclatura de ISO 27002:2022 (no MAGERIT).
-Motivo: norma más moderna, internacionalmente reconocida, y útil para que los alumnos
+### Controles (ISO 27002:2022)
+Marco normativo: ISO 27002:2022 (no MAGERIT puro).
+Motivo: norma moderna, internacionalmente reconocida, útil para que los alumnos
 trabajen con un marco normativo real de uso profesional.
-En clase se compara con MAGERIT donde corresponde.
 
-### Fórmula de riesgo residual — Factor de Cobertura (DECISIÓN CERRADA)
+Controles pre-cargados por amenaza y tipo de activo según catálogo definido.
+Cada control tiene código ISO, nombre y estado de implementación.
 
-MAGERIT puro resta la efectividad de cada control directamente sobre probabilidad e impacto
-por separado, usando una tabla de relevancia control-amenaza generada por macros VBA.
-En esta app se simplifica con un Factor de Cobertura multiplicado sobre el riesgo inherente.
+Estados de control:
+- Efectivo        → valor 0.20 (reduce el riesgo en un 80%)
+- Parcial         → valor 0.50 (reduce el riesgo en un 50%)
+- No implementado → valor 1.00 (sin reducción)
 
-Estados de control y sus valores:
-- Efectivo        → 0.20  (reduce el riesgo en un 80%)
-- Parcial         → 0.50  (reduce el riesgo en un 50%)
-- No implementado → 1.00  (sin reducción)
+Nota: Para activos tipo Proveedor el control es binario (Efectivo / No implementado).
+No existe estado Parcial para proveedores — la homologación es una decisión formal.
 
-Fórmula:
+### Riesgo Residual — Factor de Cobertura
+Fórmula general:
   Factor_cobertura = promedio(valores de todos los controles de esa amenaza)
   Riesgo_residual  = Riesgo_inherente × Factor_cobertura
 
+Ejemplo verificado:
+  Activo SI: C=0.8, I=0.6, D=0.3 / Amenaza acceso no autorizado: Prob=0.8, DegC=0.8, DegI=0.6, DegD=0.3
+  Riesgo inherente = max(0.51, 0.29, 0.07) = 0.51
+  Controles: 5.15 Efectivo(0.20) + 8.5 Parcial(0.50) → Factor = 0.35
+  Riesgo residual = 0.51 × 0.35 = 0.18 ✓
+
 Excepción — Proveedor homologado:
-  Si el control 5.19+5.20 está en estado "Efectivo" → Riesgo_residual = 0.10 (nivel Leve)
-  para TODAS las amenazas del proveedor, independientemente del cálculo general.
-  Motivo: la homologación del proveedor es un control integral que cubre todas sus amenazas.
+  Si el control 5.19+5.20 se marca como "Efectivo" en cualquier amenaza del proveedor:
+  - Aparece un confirm() explicando que la homologación es un control integral
+  - Si el usuario acepta: todos los controles de TODAS las amenazas del proveedor
+    pasan a Efectivo y el riesgo residual = 0.10 (Leve) para todas
+  - Si el usuario cancela: no se hace ningún cambio
+  La misma lógica simétrica aplica al cambiar a "No implementado":
+  - Confirm() advierte que se quitará la homologación de todas las amenazas
+  - Si acepta: todos los controles vuelven a No implementado
 
 Comparación con MAGERIT para usar en clase:
-  "MAGERIT puro resta la efectividad de cada control sobre probabilidad e impacto por separado.
-  Nosotros simplificamos a un factor promedio sobre el riesgo final. La dirección es la misma
-  —más controles efectivos, menor riesgo residual— pero la magnitud no es exactamente igual.
-  Esta simplificación es válida para tomar decisiones; en una auditoría real se usaría la
-  metodología completa."
+  "MAGERIT puro resta la efectividad de cada control sobre probabilidad e impacto
+  por separado, usando una tabla de relevancia generada por macros VBA. Nosotros
+  simplificamos a un factor promedio sobre el riesgo final. La dirección es la misma
+  —más controles efectivos, menor riesgo residual— pero la magnitud no es exactamente
+  igual. Esta simplificación es válida para tomar decisiones; en una auditoría real
+  se usaría la metodología completa."
 
 ### Catálogo de controles ISO 27002:2022 — mapeo amenaza → controles
 
@@ -117,42 +116,52 @@ Comparación con MAGERIT para usar en clase:
 
 #### Personas
 
-| Amenaza                              | Código ISO  | Nombre del control                          |
-|-------------------------------------|-------------|---------------------------------------------|
-| Error humano                        | 6.3         | Concienciación, educación y formación       |
+| Amenaza                              | Código ISO  | Nombre del control                           |
+|-------------------------------------|-------------|----------------------------------------------|
+| Error humano                        | 6.3         | Concienciación, educación y formación        |
 | Error humano                        | 5.37        | Documentación de procedimientos operacionales|
-| Fuga de información por el personal | 6.6         | Acuerdos de confidencialidad (NDA)          |
-| Fuga de información por el personal | 8.12        | Prevención de fugas de datos (DLP)          |
-| Ingeniería social (víctima)         | 6.3         | Concienciación, educación y formación       |
-| Ingeniería social (víctima)         | 6.4         | Proceso disciplinario                       |
+| Fuga de información por el personal | 6.6         | Acuerdos de confidencialidad (NDA)           |
+| Fuga de información por el personal | 8.12        | Prevención de fugas de datos (DLP)           |
+| Ingeniería social (víctima)         | 6.3         | Concienciación, educación y formación        |
+| Ingeniería social (víctima)         | 6.4         | Proceso disciplinario                        |
 | Indisponibilidad del personal clave | 5.37        | Documentación de procedimientos operacionales|
-| Indisponibilidad del personal clave | 5.30        | Preparación de TIC para continuidad         |
-| Abuso de privilegios                | 8.2         | Gestión de privilegios de acceso            |
-| Abuso de privilegios                | 5.3         | Segregación de tareas                       |
-| Acción malintencionada interna      | 8.15        | Registro de eventos (logging)               |
-| Acción malintencionada interna      | 5.3         | Segregación de tareas                       |
+| Indisponibilidad del personal clave | 5.30        | Preparación de TIC para continuidad          |
+| Abuso de privilegios                | 8.2         | Gestión de privilegios de acceso             |
+| Abuso de privilegios                | 5.3         | Segregación de tareas                        |
+| Acción malintencionada interna      | 8.15        | Registro de eventos (logging)                |
+| Acción malintencionada interna      | 5.3         | Segregación de tareas                        |
 
 #### Proveedor — control único integral
 
-| Código ISO  | Nombre del control                                              | Efecto                                      |
-|-------------|----------------------------------------------------------------|---------------------------------------------|
-| 5.19 + 5.20 | Seguridad en relaciones con proveedores + Acuerdos de seguridad| Si Efectivo → Riesgo residual = Leve (0.10) |
-|             | (homologación: SLA + NDA + requisitos de seguridad documentados)| para TODAS las amenazas del proveedor       |
+| Código ISO  | Nombre del control                                               | Efecto                                       |
+|-------------|------------------------------------------------------------------|----------------------------------------------|
+| 5.19 + 5.20 | Seguridad en relaciones con proveedores + Acuerdos de seguridad  | Si Efectivo → Riesgo residual = 0.10 (Leve)  |
+|             | (homologación: SLA + NDA + requisitos de seguridad documentados) | para TODAS las amenazas del proveedor        |
 
-### Lo que hay que construir en v2
-- Pantalla 2 (Amenazas): agregar sección de controles por amenaza dentro del acordeón
-  - Controles pre-cargados según amenaza y tipo de activo
-  - Cada control con selector de estado: Efectivo / Parcial / No implementado
-- Pantalla 3 (Resumen): mostrar columnas adicionales
-  - Riesgo inherente (ya existe)
-  - Controles (cantidad y estado resumido)
-  - Riesgo residual (nuevo, calculado con Factor de Cobertura)
-  - Mismo código de colores existente aplicado al riesgo residual
+## Decisiones de diseño — desviaciones de MAGERIT puro
 
-### Restricciones para v2
-- Mantener archivo único index.html
-- No romper funcionalidad existente de v1
-- Misma escala visual y criterios de color
+1. ACTIVOS SIMPLIFICADOS: En lugar de los tipos granulares de MAGERIT (HW, SW, COM, D, L, P),
+   se usan 3 tipos operativos: Sistema Informático, Proveedor, Personas.
+   Sistema Informático agrupa internamente HW + SW + datos + red sin modelar dependencias.
+   Motivo: simplicidad educativa y proximidad a la práctica corporativa real.
+
+2. RIESGO COLAPSADO: MAGERIT calcula riesgo por dimensión de forma separada.
+   En esta app se muestra el desglose (R. Inherente C, I, D) pero el Riesgo Inherente final
+   es max(Riesgo_C, Riesgo_I, Riesgo_D) como criterio conservador.
+   Motivo: facilitar la toma de decisiones y la comunicación en clase.
+
+3. SIN DEPENDENCIAS DE ACTIVOS: MAGERIT modela árboles de dependencia entre activos.
+   Esta app no implementa dependencias.
+   Motivo: complejidad innecesaria para el MVP educativo.
+
+4. CONTROLES ISO 27002:2022 EN LUGAR DE SALVAGUARDAS MAGERIT: Se usa ISO 27002:2022
+   como marco de controles por ser más moderno y reconocido internacionalmente.
+   El mapeo amenaza→control es decisión del analista (no existe en MAGERIT Libro II).
+   Motivo: valor educativo y relevancia profesional.
+
+5. RIESGO RESIDUAL POR FACTOR DE COBERTURA: En lugar de la sustracción por dimensión
+   de MAGERIT puro, se usa un factor multiplicador promedio sobre el riesgo inherente final.
+   Motivo: implementable sin macros VBA, educativamente equivalente en dirección.
 
 ## Próximas iteraciones
 - MVP v3: riesgo objetivo + plan de tratamiento del riesgo (PTR)
@@ -165,9 +174,10 @@ Comparación con MAGERIT para usar en clase:
 - Mantener todo en un único archivo index.html
 
 ## Flujo de trabajo
-- Claude.ai: diseño y decisiones. Claude Code en VS Code: construcción.
+- Claude.ai: diseño y decisiones. Claude Code en terminal o VS Code: construcción.
+- Claude Code se usa vía terminal (comando `claude`) con modelo Sonnet — no via extensión VS Code
 - Antes de cada sesión de Claude Code: hacer git commit como punto de restauración
-- Después de cada sesión de Claude Code: hacer git commit con descripción de lo construido
+- Después de cada sesión de Claude Code: hacer git commit + git push origin main
 
 ## Cómo arrancar una sesión nueva en Claude.ai
 1. Adjuntar este archivo (DECISIONS.md) al inicio de la conversación
