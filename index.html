@@ -470,7 +470,7 @@
                             <div class="threat-item">
                                 <button class="expand-btn" onclick="toggleThreat(${assets.indexOf(asset)}, ${index})"><span class="icon">▶</span> ${threat.name}</button>
                                 <div class="threat-details" id="threat-${assets.indexOf(asset)}-${index}">
-                                    <label><input type="checkbox" ${threat.applies ? 'checked' : ''} onchange="updateThreatApplies(${assets.indexOf(asset)}, ${index}, this.checked)"> No aplica</label>
+                                    <label><input type="checkbox" ${threat.applies ? 'checked' : ''} onchange="updateThreatApplies(${assets.indexOf(asset)}, ${index}, this.checked)"> Aplica</label>
                                     <div class="form-group">
                                         <label>Probabilidad:</label>
                                         <select onchange="updateThreatProb(${assets.indexOf(asset)}, ${index}, this.value)">
