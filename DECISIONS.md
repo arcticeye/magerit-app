@@ -175,7 +175,7 @@ Comparación con MAGERIT para usar en clase:
 
 ## Flujo de trabajo
 - Claude.ai: diseño y decisiones. Claude Code en terminal o VS Code: construcción.
-- Claude Code se usa vía terminal (comando `claude`) con modelo Sonnet — no via extensión VS Code
+- Claude Code se usa vía extensión VS Code con modelo Sonnet. Si no funciona se usa terminal (comando `claude`).
 - Antes de cada sesión de Claude Code: hacer git commit como punto de restauración
 - Después de cada sesión de Claude Code: hacer git commit + git push origin main
 
