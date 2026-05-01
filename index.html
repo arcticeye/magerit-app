@@ -168,7 +168,12 @@
                 <textarea id="asset-desc"></textarea>
             </div>
             <div class="form-group">
-                <label>Valor Confidencialidad:</label>
+                <label>Valor Confidencialidad:
+                    <span title="Confidencialidad: mide el daño que causaría que esta información fuera accedida por personas no autorizadas.&#10;&#10;Considerá valorarla Alta o Muy Alta si el activo almacena o procesa:&#10;• Datos personales identificables de personas físicas&#10;• Datos personales de más de 10.000 personas o de categoría especial (salud, ideología, biometría, origen racial, vida sexual)&#10;• Información estratégica, financiera o de negocio cuya divulgación podría causar un daño grave a la organización&#10;• Información de uso interno restringido a áreas o proyectos específicos&#10;&#10;Valorá Media o Baja si la información es de uso interno general sin restricciones especiales.&#10;Valorá N/A si la confidencialidad no aplica (ej: información pública)."
+                          style="display:inline-block; width:16px; height:16px; background:#1a365d;
+                                 color:white; border-radius:50%; font-size:11px; font-weight:bold;
+                                 text-align:center; line-height:16px; cursor:help; margin-left:6px;">?</span>
+                </label>
                 <select id="asset-c">
                     <option value="1.0">Muy Alta</option>
                     <option value="0.8">Alta</option>
@@ -179,7 +184,12 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>Valor Integridad:</label>
+                <label>Valor Integridad:
+                    <span title="Integridad: mide el daño que causaría que esta información fuera modificada o corrompida sin autorización.&#10;&#10;Considerá valorarla Alta o Muy Alta si el activo almacena o procesa:&#10;• Datos cuya modificación no autorizada podría afectar decisiones críticas de negocio&#10;• Configuraciones o parámetros cuya alteración podría provocar interrupciones operativas&#10;• Información que debe ser exacta por requisitos legales o contractuales&#10;&#10;Valorá Media o Baja si los errores son detectables y corregibles sin impacto significativo.&#10;Valorá N/A si la integridad no aplica."
+                          style="display:inline-block; width:16px; height:16px; background:#1a365d;
+                                 color:white; border-radius:50%; font-size:11px; font-weight:bold;
+                                 text-align:center; line-height:16px; cursor:help; margin-left:6px;">?</span>
+                </label>
                 <select id="asset-i">
                     <option value="1.0">Muy Alta</option>
                     <option value="0.8">Alta</option>
@@ -190,7 +200,12 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>Valor Disponibilidad:</label>
+                <label>Valor Disponibilidad:
+                    <span title="Disponibilidad: mide el daño que causaría que este activo dejara de estar accesible cuando se necesita.&#10;&#10;Considerá valorarla Alta o Muy Alta si:&#10;• Su indisponibilidad interrumpiría procesos críticos de negocio o causaría incumplimiento de SLAs (acuerdos de nivel de servicio)&#10;• Es un servicio o sistema que debe estar operativo de forma continua o con tiempos de recuperación muy bajos&#10;• Su caída generaría pérdidas económicas o daño reputacional significativo&#10;&#10;Valorá Media o Baja si su indisponibilidad temporal es tolerable sin impacto grave.&#10;Valorá N/A si la disponibilidad no aplica."
+                          style="display:inline-block; width:16px; height:16px; background:#1a365d;
+                                 color:white; border-radius:50%; font-size:11px; font-weight:bold;
+                                 text-align:center; line-height:16px; cursor:help; margin-left:6px;">?</span>
+                </label>
                 <select id="asset-d">
                     <option value="1.0">Muy Alta</option>
                     <option value="0.8">Alta</option>
@@ -239,6 +254,38 @@
 
     <script>
         // Datos pre-cargados
+        const dimensionDescriptions = {
+            "C": "Confidencialidad: mide el daño que causaría que esta información fuera accedida por personas no autorizadas.\n\nConsiderá valorarla Alta o Muy Alta si el activo almacena o procesa:\n• Datos personales identificables de personas físicas\n• Datos personales de más de 10.000 personas o de categoría especial (salud, ideología, biometría, origen racial, vida sexual)\n• Información estratégica, financiera o de negocio cuya divulgación podría causar un daño grave a la organización\n• Información de uso interno restringido a áreas o proyectos específicos\n\nValorá Media o Baja si la información es de uso interno general sin restricciones especiales.\nValorá N/A si la confidencialidad no aplica (ej: información pública).",
+            "I": "Integridad: mide el daño que causaría que esta información fuera modificada o corrompida sin autorización.\n\nConsiderá valorarla Alta o Muy Alta si el activo almacena o procesa:\n• Datos cuya modificación no autorizada podría afectar decisiones críticas de negocio\n• Configuraciones o parámetros cuya alteración podría provocar interrupciones operativas\n• Información que debe ser exacta por requisitos legales o contractuales\n\nValorá Media o Baja si los errores son detectables y corregibles sin impacto significativo.\nValorá N/A si la integridad no aplica.",
+            "D": "Disponibilidad: mide el daño que causaría que este activo dejara de estar accesible cuando se necesita.\n\nConsiderá valorarla Alta o Muy Alta si:\n• Su indisponibilidad interrumpiría procesos críticos de negocio o causaría incumplimiento de SLAs (acuerdos de nivel de servicio)\n• Es un servicio o sistema que debe estar operativo de forma continua o con tiempos de recuperación muy bajos\n• Su caída generaría pérdidas económicas o daño reputacional significativo\n\nValorá Media o Baja si su indisponibilidad temporal es tolerable sin impacto grave.\nValorá N/A si la disponibilidad no aplica."
+        };
+
+        const controlDescriptions = {
+            "5.3":      "Separa funciones incompatibles entre distintas personas para reducir el riesgo de fraude, error o elusión de controles.",
+            "5.15":     "Garantiza que solo los usuarios autorizados acceden a la información y activos, evitando accesos no autorizados.",
+            "5.19":     "Establece requisitos de seguridad en la relación con proveedores para mantener el nivel de protección acordado.",
+            "5.19+5.20":"Formaliza mediante acuerdos contractuales (SLA, NDA, requisitos de seguridad) los compromisos de seguridad con el proveedor.",
+            "5.20":     "Formaliza mediante acuerdos contractuales los requisitos de seguridad que deben cumplir los proveedores.",
+            "5.30":     "Asegura la disponibilidad de sistemas y datos durante una interrupción, como parte del plan de continuidad.",
+            "5.37":     "Documenta los procedimientos operacionales para garantizar el funcionamiento correcto y seguro de los sistemas.",
+            "6.3":      "Garantiza que el personal conozca sus responsabilidades de seguridad mediante formación y concienciación continua.",
+            "6.4":      "Establece consecuencias formales ante incumplimientos de seguridad para disuadir comportamientos inadecuados.",
+            "6.6":      "Protege la confidencialidad de la información mediante acuerdos de no divulgación (NDA) con personal y terceros.",
+            "8.2":      "Controla y limita los privilegios de acceso elevado para que solo los usuarios autorizados los tengan.",
+            "8.5":      "Garantiza que usuarios y sistemas se autentican de forma segura antes de acceder a aplicaciones o servicios.",
+            "8.6":      "Asegura que la capacidad de los sistemas (almacenamiento, red, cómputo) es suficiente para operar sin interrupciones.",
+            "8.7":      "Protege los sistemas frente a malware, ransomware y código malicioso mediante detección y prevención.",
+            "8.8":      "Identifica y corrige vulnerabilidades técnicas antes de que puedan ser explotadas por un atacante.",
+            "8.9":      "Garantiza que los sistemas operan con configuraciones seguras y que estas no son alteradas sin autorización.",
+            "8.12":     "Detecta e impide la extracción o divulgación no autorizada de información sensible (Data Loss Prevention).",
+            "8.13":     "Asegura que existe copias de respaldo de la información para poder recuperarla ante pérdida o daño.",
+            "8.14":     "Garantiza la continuidad operativa mediante redundancia de sistemas y recursos de procesamiento.",
+            "8.15":     "Registra eventos del sistema para detectar incidentes, generar evidencias y apoyar investigaciones.",
+            "8.20":     "Protege la red y los sistemas conectados mediante controles que regulan el tráfico y el acceso de red.",
+            "8.23":     "Bloquea el acceso a sitios web no autorizados o maliciosos para prevenir infecciones y fugas de datos.",
+            "8.24":     "Protege la confidencialidad e integridad de la información mediante el uso adecuado de criptografía.",
+        };
+
         const threatsData = {
             "Sistema Informático": [
                 { name: "Acceso no autorizado", prob: 0.8, c: 0.8, i: 0.6, d: 0.3 },
@@ -541,7 +588,13 @@
                                         <h4 style="margin-top: 0;">Controles Aplicables:</h4>
                                         ${(threat.controls || []).map((ctrl, ctrlIndex) => `
                                             <div class="form-group">
-                                                <label>${ctrl.code} - ${ctrl.name}</label>
+                                                <label>
+                                                    ${ctrl.code} - ${ctrl.name}
+                                                    <span title="${controlDescriptions[ctrl.code] || ''}"
+                                                          style="display:inline-block; width:16px; height:16px; background:#1a365d;
+                                                                 color:white; border-radius:50%; font-size:11px; font-weight:bold;
+                                                                 text-align:center; line-height:16px; cursor:help; margin-left:6px;">?</span>
+                                                </label>
                                                 <select onchange="updateControlState(${assets.indexOf(asset)}, ${index}, ${ctrlIndex}, this.value, this)">
                                                     <option value="No implementado" ${ctrl.state === 'No implementado' ? 'selected' : ''}>No implementado</option>
                                                     ${asset.type !== 'Proveedor' ? `<option value="Parcial" ${ctrl.state === 'Parcial' ? 'selected' : ''}>Parcial</option>` : ''}
@@ -626,6 +679,29 @@
             } else {
                 // Comportamiento normal para otros casos
                 threats[assetName][threatIndex].controls[controlIndex].state = state;
+
+                // Propagar a todas las amenazas con el mismo código (excepto Proveedor)
+                const updatedCode = threats[assetName][threatIndex].controls[controlIndex].code;
+                const currentAssetType = asset.type;
+
+                // No propagar si el activo actual es Proveedor
+                if (currentAssetType !== 'Proveedor') {
+                    assets.forEach(a => {
+                        // No propagar hacia activos de tipo Proveedor
+                        if (a.type !== 'Proveedor') {
+                            (threats[a.name] || []).forEach(t => {
+                                (t.controls || []).forEach(ctrl => {
+                                    if (ctrl.code === updatedCode) {
+                                        ctrl.state = state;
+                                    }
+                                });
+                            });
+                        }
+                    });
+                }
+
+                // Refrescar la pantalla para mostrar la propagación
+                updateThreatsScreen();
             }
         }
 
@@ -1010,6 +1086,10 @@
                                         <input type="checkbox" ${isSelected ? 'checked' : ''}
                                             onchange="handleControlSelection('${item.asset.name}', '${item.threat.name}', ${realIdx}, this.checked, ${idx}, ${item.riesgoInherente})">
                                         <strong>${ctrl.code}</strong> - ${ctrl.name}
+                                        <span title="${controlDescriptions[ctrl.code] || ''}"
+                                              style="display:inline-block; width:16px; height:16px; background:#1a365d;
+                                                     color:white; border-radius:50%; font-size:11px; font-weight:bold;
+                                                     text-align:center; line-height:16px; cursor:help; margin-left:6px;">?</span>
                                         <span style="color: #666;">(Estado actual: ${ctrl.state})</span>
                                     </label>
                                 </div>
