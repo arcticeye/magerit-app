@@ -10,16 +10,27 @@ Autor: Matías Daniel Adés, consultor senior de ciberseguridad y GRC.
 - Sin frameworks, sin dependencias, sin servidor
 - Se abre directamente en el navegador
 
-## Estado actual — MVP v2 completado
+## Estado actual — MVP v3 completado
 Título de la app: "Análisis y Evaluación de Riesgos"
 Subtítulo: "Aplicación Educativa que integra MAGERIT v3 e ISO/IEC 27002:2022"
 
-Flujo de 3 pantallas:
-1. Activos: ABM completo (agregar, editar, eliminar) con valores C, I, D
+Flujo de 4 pantallas:
+1. Activos: ABM completo (agregar, editar, eliminar) con valores C, I, D.
+   Cada dimensión tiene ícono (?) con tooltip explicativo sobre qué implica valorarla.
 2. Amenazas: pre-cargadas por tipo de activo, editables en acordeón,
-   con probabilidad, degradación y controles ISO 27002:2022 por amenaza
-3. Resumen: tabla con riesgo inherente (C, I, D + final) y riesgo residual,
-   ambos con código de colores por nivel
+   con probabilidad, degradación y controles ISO 27002:2022 por amenaza.
+   Cada control tiene ícono (?) con descripción extraída de ISO 27002:2022.
+   Al cambiar el estado de un control, se replica automáticamente en todas
+   las amenazas donde aparece el mismo código ISO (excepto Proveedor).
+   Botón: "Calcular Riesgo Residual".
+3. Resumen: tabla con riesgo inherente (C, I, D + final), riesgo residual,
+   tratamiento y riesgo objetivo — todos con código de colores por nivel.
+   Botón: "Planificar Tratamiento" (habilita pantalla 4; muestra alerta si
+   todos los riesgos son Leve).
+4. Plan de Tratamiento (PTR): lista amenazas con riesgo residual > Leve,
+   ordenadas de mayor a menor. Para cada una el analista elige tipo de
+   tratamiento y completa responsable, descripción y fecha objetivo.
+   Botón: "Calcular Riesgo Objetivo" (actualiza columnas en Resumen y navega allí).
 
 ## Lógica de negocio implementada
 
@@ -38,7 +49,7 @@ Fórmulas:
 - Riesgo_dim = Impacto_dim × Probabilidad
 - Riesgo_inherente = max(Riesgo_C, Riesgo_I, Riesgo_D)
 
-Niveles de riesgo (aplica a inherente y residual):
+Niveles de riesgo (aplica a inherente, residual y objetivo):
 - 0.00–0.19 = Leve (verde)
 - 0.20–0.39 = Medio (amarillo)
 - 0.40–0.59 = Moderado (naranja)
@@ -46,7 +57,7 @@ Niveles de riesgo (aplica a inherente y residual):
 - 0.80–1.00 = Crítico (rojo oscuro)
 
 Reglas:
-- Amenazas marcadas "No aplica" no aparecen en el resumen
+- Amenazas con checkbox "Incluir en el análisis" desmarcado no aparecen en el resumen ni en el PTR.
 
 ### Controles (ISO 27002:2022)
 Marco normativo: ISO 27002:2022 (no MAGERIT puro).
@@ -54,7 +65,8 @@ Motivo: norma moderna, internacionalmente reconocida, útil para que los alumnos
 trabajen con un marco normativo real de uso profesional.
 
 Controles pre-cargados por amenaza y tipo de activo según catálogo definido.
-Cada control tiene código ISO, nombre y estado de implementación.
+Cada control tiene código ISO, nombre, estado de implementación y tooltip
+con descripción del propósito del control extraída de ISO 27002:2022.
 
 Estados de control:
 - Efectivo        → valor 0.20 (reduce el riesgo en un 80%)
@@ -63,6 +75,11 @@ Estados de control:
 
 Nota: Para activos tipo Proveedor el control es binario (Efectivo / No implementado).
 No existe estado Parcial para proveedores — la homologación es una decisión formal.
+
+Propagación de estados: al cambiar el estado de un control en cualquier amenaza,
+el nuevo estado se propaga automáticamente a todos los controles con el mismo
+código ISO en todas las amenazas de todos los activos no-Proveedor.
+Los controles de Proveedor (5.19+5.20) quedan excluidos de la propagación.
 
 ### Riesgo Residual — Factor de Cobertura
 Fórmula general:
@@ -92,6 +109,28 @@ Comparación con MAGERIT para usar en clase:
   —más controles efectivos, menor riesgo residual— pero la magnitud no es exactamente
   igual. Esta simplificación es válida para tomar decisiones; en una auditoría real
   se usaría la metodología completa."
+
+### Plan de Tratamiento del Riesgo (PTR)
+
+Solo aparecen amenazas con riesgo residual > 0.19 (superiores a Leve), ordenadas
+de mayor a menor. Los riesgos Leves no requieren PTR formal.
+
+Tipos de tratamiento y efecto en el Riesgo Objetivo:
+
+| Tratamiento | Riesgo Objetivo | Lógica |
+|-------------|----------------|--------|
+| Mitigar     | Recalculado según controles comprometidos | El analista tilda controles pendientes (No implementado / Parcial); se simulan como Efectivos |
+| Transferir  | Riesgo Residual × 0.50 | Se asume seguro/tercerización que cubre el 50% del impacto |
+| Evitar      | 0.00 | Se elimina la actividad/condición que genera el riesgo |
+| Aceptar     | Igual al Riesgo Residual | Se asume conscientemente sin acción adicional |
+
+Campos por amenaza: Responsable, Descripción del plan, Fecha objetivo.
+
+Flujo de navegación del PTR:
+- "Calcular Riesgo Residual" en Amenazas → genera tabla en Resumen y habilita botón "Planificar Tratamiento".
+- Si ya existe un PTR y se vuelve a calcular el Riesgo Residual: confirm() advierte que el PTR se borrará.
+- "Planificar Tratamiento" en Resumen → habilita pestaña "Plan de Tratamiento" y navega allí.
+- "Calcular Riesgo Objetivo" en PTR → actualiza columnas Tratamiento y Riesgo Objetivo en Resumen y navega allí.
 
 ### Catálogo de controles ISO 27002:2022 — mapeo amenaza → controles
 
@@ -163,9 +202,26 @@ Comparación con MAGERIT para usar en clase:
    de MAGERIT puro, se usa un factor multiplicador promedio sobre el riesgo inherente final.
    Motivo: implementable sin macros VBA, educativamente equivalente en dirección.
 
+6. PTR SIMPLIFICADO: El PTR no incluye campos de coste, beneficio, prioridad ni seguimiento.
+   Solo captura tipo de tratamiento, responsable, descripción y fecha objetivo.
+   El Riesgo Objetivo se calcula automáticamente según el tipo de tratamiento.
+   Motivo: foco en el proceso de decisión, no en la gestión operativa del plan.
+
+7. TRANSFERIR = REDUCCIÓN DEL 50%: Se asume que transferir el riesgo (ej: seguro)
+   reduce el impacto en un 50%. Valor fijo, sin modelar la cobertura real del seguro.
+   Motivo: simplificación pedagógica para ilustrar el concepto.
+
+## Valores pre-cargados de amenazas — justificación
+
+Los valores de probabilidad y degradación pre-cargados en la app son estimaciones
+iniciales basadas en la frecuencia e impacto típico de cada amenaza según el
+catálogo de MAGERIT v3 Libro II. No son valores normativos fijos — el analista
+los ajusta según el contexto real de cada organización.
+Para usar en clase: "Los valores pre-cargados son un punto de partida razonable.
+Vuestro trabajo como analistas es ajustarlos a la realidad de cada organización."
+
 ## Próximas iteraciones
-- MVP v3: riesgo objetivo + plan de tratamiento del riesgo (PTR)
-- Futuro: logging, trazabilidad, modo auditor, integración con IA (LLM)
+- MVP v4 (futuro): logging, trazabilidad, modo auditor, integración con IA (LLM)
 
 ## Instrucciones para Claude Code
 - Leer index.html completo antes de cualquier cambio
@@ -175,7 +231,8 @@ Comparación con MAGERIT para usar en clase:
 
 ## Flujo de trabajo
 - Claude.ai: diseño y decisiones. Claude Code en terminal o VS Code: construcción.
-- Claude Code se usa vía extensión VS Code con modelo Sonnet. Si no funciona se usa terminal (comando `claude`).
+- Claude Code se usa vía extensión VS Code con modelo Sonnet 4.5.
+  Si la extensión no funciona, usar terminal con: npx claude
 - Antes de cada sesión de Claude Code: hacer git commit como punto de restauración
 - Después de cada sesión de Claude Code: hacer git commit + git push origin main
 
