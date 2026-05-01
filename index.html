@@ -208,7 +208,7 @@
     <div id="screen-threats" class="screen">
         <h2>Amenazas</h2>
         <div id="threats-container"></div>
-        <button id="calculate-risks">Calcular Riesgos</button>
+        <button id="calculate-risks">Calcular Riesgo Residual</button>
     </div>
 
     <div id="screen-summary" class="screen">
@@ -644,7 +644,7 @@
         document.getElementById('nav-threats').addEventListener('click', updateThreatsScreen);
 
         // Pantalla Resumen
-        document.getElementById('calculate-risks').addEventListener('click', () => {
+        function recalculateSummaryTable() {
             const tbody = document.getElementById('summary-table-body');
             tbody.innerHTML = '';
             assets.forEach(asset => {
@@ -717,7 +717,7 @@
 
                     // Obtener datos de tratamiento si existen
                     const treatmentData = treatment[asset.name] && treatment[asset.name][threat.name];
-                    const treatmentType = treatmentData ? treatmentData.type : '—';
+                    const treatmentType = treatmentData && treatmentData.type ? treatmentData.type : '—';
                     const targetRisk = treatmentData && treatmentData.targetRisk !== null ? treatmentData.targetRisk : null;
                     const targetRiskClass = targetRisk !== null ? getRiskClass(targetRisk) : '';
                     const targetRiskDisplay = targetRisk !== null ? targetRisk.toFixed(2) : '—';
@@ -737,12 +737,97 @@
                     `;
                 });
             });
+        }
+
+        document.getElementById('calculate-risks').addEventListener('click', () => {
+            // Verificar si existe treatment con datos
+            const hasTreatmentData = Object.values(treatment).some(asset =>
+                Object.values(asset).some(t => t.type !== null)
+            );
+
+            if (hasTreatmentData) {
+                const confirmed = confirm(
+                    'Ya existe un Plan de Tratamiento definido. Recalcular el Riesgo Residual ' +
+                    'lo borrará y tendrás que volver a completarlo. ¿Querés continuar?'
+                );
+                if (!confirmed) return;
+
+                // Resetear treatment y deshabilitar nav-treatment
+                treatment = {};
+                document.getElementById('nav-treatment').disabled = true;
+            }
+
+            // Ejecutar cálculo
+            recalculateSummaryTable();
             showScreen('summary');
             document.getElementById('nav-summary').disabled = false;
-            document.getElementById('nav-treatment').disabled = false;
         });
 
         document.getElementById('plan-treatment-btn').addEventListener('click', () => {
+            // Verificar si hay al menos una amenaza con riesgo residual > 0.19
+            let hasRiskyThreats = false;
+
+            assets.forEach(asset => {
+                threats[asset.name].forEach(threat => {
+                    if (!threat.applies) return;
+
+                    // Calcular riesgo residual (misma lógica que en recalculateSummaryTable)
+                    const impactoC = asset.c * threat.c;
+                    const impactoI = asset.i * threat.i;
+                    const impactoD = asset.d * threat.d;
+                    const riesgoC = impactoC * threat.prob;
+                    const riesgoI = impactoI * threat.prob;
+                    const riesgoD = impactoD * threat.prob;
+                    const riesgoInherente = Math.max(riesgoC, riesgoI, riesgoD);
+
+                    let riesgoResidual = 0;
+                    if (asset.type === 'Proveedor') {
+                        const tieneEfectivo = (threat.controls || []).some(ctrl => ctrl.state === 'Efectivo');
+                        if (tieneEfectivo) {
+                            riesgoResidual = 0.10;
+                        } else {
+                            const controles = threat.controls || [];
+                            if (controles.length > 0) {
+                                const valorControles = controles.map(ctrl => {
+                                    if (ctrl.state === 'Efectivo') return 0.20;
+                                    if (ctrl.state === 'Parcial') return 0.50;
+                                    return 1.00;
+                                });
+                                const factor = valorControles.reduce((a, b) => a + b, 0) / valorControles.length;
+                                riesgoResidual = riesgoInherente * factor;
+                            } else {
+                                riesgoResidual = riesgoInherente;
+                            }
+                        }
+                    } else {
+                        const controles = threat.controls || [];
+                        if (controles.length > 0) {
+                            const valorControles = controles.map(ctrl => {
+                                if (ctrl.state === 'Efectivo') return 0.20;
+                                if (ctrl.state === 'Parcial') return 0.50;
+                                return 1.00;
+                            });
+                            const factor = valorControles.reduce((a, b) => a + b, 0) / valorControles.length;
+                            riesgoResidual = riesgoInherente * factor;
+                        } else {
+                            riesgoResidual = riesgoInherente;
+                        }
+                    }
+
+                    if (riesgoResidual > 0.19) {
+                        hasRiskyThreats = true;
+                    }
+                });
+            });
+
+            // Si no hay amenazas > 0.19, mostrar alert y no navegar
+            if (!hasRiskyThreats) {
+                alert('Todos los riesgos residuales están en nivel Leve. No se requiere Plan de Tratamiento formal.');
+                return;
+            }
+
+            // Habilitar nav-treatment, actualizar pantalla y navegar
+            document.getElementById('nav-treatment').disabled = false;
             updateTreatmentScreen();
             showScreen('treatment');
         });
@@ -847,7 +932,7 @@
             });
 
             // Generar HTML
-            container.innerHTML = riskyThreats.map((item, idx) => {
+            let html = riskyThreats.map((item, idx) => {
                 const treatmentData = treatment[item.asset.name][item.threat.name];
                 const currentType = treatmentData.type || '';
                 const riskClass = getRiskClass(item.riesgoResidual);
@@ -887,6 +972,15 @@
                     </div>
                 `;
             }).join('');
+
+            // Agregar botón "Calcular Riesgo Objetivo"
+            const hasAnyTreatment = Object.values(treatment).some(asset =>
+                Object.values(asset).some(t => t.type !== null)
+            );
+
+            html += `<button id="calculate-target-btn" ${!hasAnyTreatment ? 'disabled' : ''} style="margin-top: 20px;" onclick="handleCalculateTarget()">Calcular Riesgo Objetivo</button>`;
+
+            container.innerHTML = html;
         }
 
         function generateTreatmentPanel(item, treatmentData, idx, pendingControls) {
@@ -905,18 +999,22 @@
                 } else {
                     html += '<h4 style="margin-top: 0;">Controles pendientes a implementar:</h4>';
                     html += '<div style="margin-bottom: 15px;">';
-                    pendingControls.forEach((ctrl, ctrlIdx) => {
-                        const isSelected = treatmentData.selectedControls.includes(ctrlIdx);
-                        html += `
-                            <div style="margin-bottom: 8px;">
-                                <label>
-                                    <input type="checkbox" ${isSelected ? 'checked' : ''}
-                                        onchange="handleControlSelection('${item.asset.name}', '${item.threat.name}', ${ctrlIdx}, this.checked, ${idx}, ${item.riesgoInherente})">
-                                    <strong>${ctrl.code}</strong> - ${ctrl.name}
-                                    <span style="color: #666;">(Estado actual: ${ctrl.state})</span>
-                                </label>
-                            </div>
-                        `;
+                    // Iterar sobre threat.controls completo con índice real
+                    (item.threat.controls || []).forEach((ctrl, realIdx) => {
+                        // Filtrar solo los pendientes
+                        if (ctrl.state === 'No implementado' || ctrl.state === 'Parcial') {
+                            const isSelected = treatmentData.selectedControls.includes(realIdx);
+                            html += `
+                                <div style="margin-bottom: 8px;">
+                                    <label>
+                                        <input type="checkbox" ${isSelected ? 'checked' : ''}
+                                            onchange="handleControlSelection('${item.asset.name}', '${item.threat.name}', ${realIdx}, this.checked, ${idx}, ${item.riesgoInherente})">
+                                        <strong>${ctrl.code}</strong> - ${ctrl.name}
+                                        <span style="color: #666;">(Estado actual: ${ctrl.state})</span>
+                                    </label>
+                                </div>
+                            `;
+                        }
                     });
                     html += '</div>';
                     html += `<p><strong>Riesgo Objetivo proyectado:</strong> <span class="${targetRiskClass}" style="padding: 3px 8px; border-radius: 3px; font-weight: bold;">${targetRisk !== null ? targetRisk.toFixed(2) : '—'}</span></p>`;
@@ -971,6 +1069,13 @@
                 treatment[assetName][threatName].targetRisk = null;
             }
 
+            // Verificar y actualizar estado del botón calculate-target-btn
+            const hasAnyTreatment = Object.values(treatment).some(asset =>
+                Object.values(asset).some(t => t.type !== null)
+            );
+            const btn = document.getElementById('calculate-target-btn');
+            if (btn) btn.disabled = !hasAnyTreatment;
+
             // Refrescar pantalla
             updateTreatmentScreen();
         }
@@ -1016,6 +1121,11 @@
 
         function updateTreatmentField(assetName, threatName, field, value) {
             treatment[assetName][threatName][field] = value;
+        }
+
+        function handleCalculateTarget() {
+            recalculateSummaryTable();
+            showScreen('summary');
         }
     </script>
 </body>
